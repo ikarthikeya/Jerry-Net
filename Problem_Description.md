@@ -6,6 +6,7 @@ The geosynchronous satellites are “fixed” upon a static longitude and latitu
 ## **Major hypothesis:**
 We can hypothesis that the our satellites are moving swiftly relative to earth, and that the relative position between satellites are fixed because they are roughly on the same orbit.
 
+## **Major Challenges:**
 So there are two major changes for satellites-to-satellites and satellites-to-earth.
 1. **Satellite-to-satellite communication.** Satellites could be seen as formatting a separate subnet. In our use case we are basically using satellites as routers for “wifi connection”. So we don’t care that much about an accurate transmitting from one particular satellite to another. We can simply broadcast information to the whole satellite subnet once interesting event is discovered.  As satellites are far away from each other, we should assume that every satellites only have connections to nearby satellites, we need a “routing table” to update its connection status to other satellites. Because this satellites net is a peer-to-peer net, we can’t store this routing table in a centralized position. Instead, we need to invent a solution that each satellite could maintain its own routing table dynamically, as connection loss could happen more frequently in the space.
 
