@@ -22,7 +22,10 @@ It can automatically decide which satellites to connect according its calculatio
 Currently we decide to use UDP protocol with some enhanced feature(like UDP Forward Error Correction) to tackle this problem. In Python socket, using flag “socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM” will create a socket with UDP protocol.
 
 ## **Temporary Task splitting intention**
-Daim: tackle earth-2-earth UDP handling function
-Karthik: tackle satellite-2-satellite router table maintenance
-Ting: simulate satellite location change, simulate signal change function and packet loss in UDP transportation.
-Sanjiv: Define clear use case scenario, propose requirements such as data type/data flag/frequency of event detection & update
+**Daim:** tackle earth-2-earth UDP handling function
+
+**Karthik:** tackle satellite-2-satellite router table maintenance
+
+**Ting:** simulate satellite location change, simulate signal change function and packet loss in UDP transportation.
+
+**Sanjiv:** Define clear use case scenario, propose requirements such as data type/data flag/frequency of event detection & update
