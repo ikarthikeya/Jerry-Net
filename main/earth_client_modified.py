@@ -71,12 +71,24 @@ def verify_checksum(data, checksum):
 
 def start_clumsy(single_latency, single_drop_rate):
     # clumsy working directory
-    CLUM_DIR = "clumsy"
+    CLUM_DIR = "D:/2024_scalable_computing/Jerry-Net/clumsy"
     # Start Clumsy with 10% packet loss
     cmd = f"clumsy.exe --drop on --drop-inbound on --drop-outbound on --drop-chance {single_drop_rate} " \
           f"--lag on --lag-inbound on --lag-outbound on --lag-time {single_latency}"
     process = subprocess.Popen(cmd, cwd=CLUM_DIR, shell=True)
-    print("clumsy started.")
+    #process = subprocess.Popen(
+    #    [cmd],
+    #    cwd=CLUM_DIR,
+    #    #shell=True,
+    #    stdin=subprocess.PIPE,
+    #    stdout=subprocess.PIPE,
+    #    stderr=subprocess.PIPE,
+    #    creationflags=subprocess.CREATE_NO_WINDOW  # Suppresses the console window
+    #)
+
+    # Wait for the process to finish (optional)
+    #process.wait()
+    #print("clumsy started.")
     return process.pid
 
 
@@ -86,7 +98,7 @@ def kill_clumsy(pid):
     for child in parent.children(recursive=True):
         child.kill()
     parent.kill()
-    print("clumsy stopped.")
+    #print("clumsy stopped.")
 
 
 def e2s_lantency(earth_lat, earth_lon, sat_lat, sat_lon):
@@ -104,50 +116,35 @@ def e2s_packet_loss(earth_lat, earth_lon, sat_lat, sat_lon):
     # calculate distance between earth and satellite
     distance = earth_sat_distance(earth_lat, earth_lon, sat_lat, sat_lon)
     # man-made function, this function is chosen as packet loss accelerates to increase when the distance increases
-    single_bound_loss_rate = min(0.02 * np.exp((distance - SAT_H) / 1000.), 1.0)
+    single_bound_loss_rate = min(0.0005 * np.exp((distance - SAT_H) / 1000.), 0.2)
     return single_bound_loss_rate * 100
 
 
-def clumsy_simulate(server_addr, buffer_size, timeout, self_ll, self_node_num):
-    inquire_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    inquire_socket.settimeout(timeout)
+def clumsy_simulate(routing_manager, self_ll):
     self_lat, self_lon = self_ll
     clumsy_pid = None
+    distances = []
+    ll_infos = []
+    active_satellits ={}
     # simulate different latency and drag for every three seconds
     while True:
-        # inquire server about satellites index and latitude,longitude information
-        flag = 0
-        pn, tp, cu = 0, 0, 0  # dummy parameters here, they are neglected in flag=0 case
-        header = flag.to_bytes(4, 'big') + self_node_num.to_bytes(4, 'big') \
-                 + pn.to_bytes(4, 'big') + tp.to_bytes(4, 'big')
-        inquiry = header + cu.to_bytes(4, 'big')
-        # print("start inquiry...")
-        try:
-            # send the inquiry
-            inquire_socket.sendto(inquiry, server_addr)
-            # print("inquiry sent...")
-            # Wait for acknowledgement
-            ack, _ = inquire_socket.recvfrom(buffer_size)
-            # print("ack received..")
-            # Decode the packet
-            flag, node_number, lat_info, lon_info = ack[:4], ack[4:8], ack[8:12], ack[12:16]
-            flag = int.from_bytes(flag, 'big')
-            assert flag == 0, "Received wrong acknowledgement for latitude/longitude inquiry"
-            node_number = int.from_bytes(node_number, 'big')
-            sat_lat = int.from_bytes(lat_info, 'big', signed=True)
-            sat_lon = int.from_bytes(lon_info, 'big', signed=True)
-            # calculate latency and packet loss rate
-            distance = earth_sat_distance(self_lat, self_lon, sat_lat, sat_lon)
-            single_latency = e2s_lantency(self_lat, self_lon, sat_lat, sat_lon)
-            single_drop_rate = e2s_packet_loss(self_lat, self_lon, sat_lat, sat_lon)
-            print(f"earth lat {self_lat},earth lon {self_lon},sat lat {sat_lat}, sat lon {sat_lon}")
+        active_satellites = routing_manager.get_active_satellites()
+        if active_satellites:
+            for ll_info in active_satellites.values():
+                sat_lat,sat_lon= ll_info['latitude'],ll_info['longitude']
+                # calculate distance
+                distance = earth_sat_distance(self_lat, self_lon, sat_lat, sat_lon)
+                distances.append(distance)
+                ll_infos.append(ll_info)
+            # shortest distance
+            min_index, min_dis = min(enumerate(distances), key=lambda x: x[1])
+            single_latency = e2s_lantency(self_lat, self_lon, ll_infos[min_index]['latitude'], ll_infos[min_index]['longitude'])
+            single_drop_rate = e2s_packet_loss(self_lat, self_lon, ll_infos[min_index]['latitude'], ll_infos[min_index]['longitude'])
             print(
-                f"E2S distance: {distance} km, single bound latency {single_latency} ms, single bound drop rate {single_drop_rate}")
+                f"E2S distance: {min_dis:.2f} km, single bound latency {single_latency:.2f} ms, single bound drop rate {single_drop_rate:.2f}")
             if clumsy_pid is not None:
                 kill_clumsy(clumsy_pid)
             clumsy_pid = start_clumsy(single_latency, single_drop_rate)
-        except socket.timeout:
-            pass
         time.sleep(3)
 
 
@@ -197,7 +194,12 @@ if __name__ == "__main__":
     update_thread = threading.Thread(
         target=routing_manager.update_routing_table, args=(EARTH_NODE_NUM,), daemon=True
     )
+    clumsy_thread = threading.Thread(target=clumsy_simulate,
+                                     args=(routing_manager, EARTH_LL),
+                                     daemon=True)
     update_thread.start()
+
+    clumsy_thread.start()
 
     # client_thread = threading.Thread(target=client,
     #                                  args=(routing_manager,SAT_ADDR, BUFFER_SIZE, TIMEOUT,DEBUG_INTER, CHUNK_SIZE, EARTH_NODE_NUM,message),

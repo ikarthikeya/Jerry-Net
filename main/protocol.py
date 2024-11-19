@@ -161,6 +161,7 @@ def send_packets(src_addr,des_addr,router_addr,message,timeout=1,chunk_size=32,b
         #except Exception:
         #    sending_queue.put((packet_number, packet))
         time.sleep(debug_interval)
+    print("----------------------------------------------------")
     print(f"---UDP packets all sent: statistics below---\n")
     packets_transmitted = total_send
     packets_received = len(rtts)
@@ -177,6 +178,7 @@ def send_packets(src_addr,des_addr,router_addr,message,timeout=1,chunk_size=32,b
         print(f"rtt min={min_rtt:.2f} ms, avg={avg_rtt:.2f} ms, max={max_rtt:.2f} ms\n")
     else:
         print("No RTT data available.\n")
+    print("----------------------------------------------------")
 
 
 def send_ack(server_addr,sending_address,server_socket,decode_res,received_packets):
@@ -252,19 +254,3 @@ if __name__ == "__main__":
             time.sleep(1)
     except KeyboardInterrupt:
         print("Exiting..")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
