@@ -29,17 +29,18 @@ def verify_checksum(data, checksum):
 def keep_moving(global_dequeue, orbit_z_axis, num_sats, velocity, sat_index):
     sat_ll_list = init_satellites(orbit_z_axis, num_sats)
     # initial lat, lon of the satellite
-    (lat, lon) = sat_ll_list[sat_index]
+    lat_lon = sat_ll_list
     start_time = time.time()
     while True:
-        time.sleep(1)
-        end_time = time.time()
-        t = end_time - start_time
-        start_time = end_time
-        lat, lon = satellites_move((lat, lon), orbit_z_axis, velocity, t)
-        print(f"Satellites keeps moving: time slaps {t}, latitude {lat}, longitude {lon}")
-        # update data in global queue for multi-threading data share
-        global_dequeue.append((lat, lon))
+        for i in range(num_sats):
+            time.sleep(1)
+            end_time = time.time()
+            t = end_time - start_time
+            start_time = end_time
+            lat_lon[i][0], lat_lon[i][1] = satellites_move((lat_lon[i][0], lat_lon[i][1]), orbit_z_axis, velocity, t)
+            print(f"Satellite {i+1} keeps moving: time slaps {t}, latitude {lat_lon[i][0]}, longitude {lat_lon[i][1]}")
+            # update data in global queue for multi-threading data share
+            global_dequeue[i].append((lat_lon[i][0], lat_lon[i][1]))
 
 
 def server(global_dequeue, server_addr, buffer_size, sat_node_number):
@@ -47,7 +48,7 @@ def server(global_dequeue, server_addr, buffer_size, sat_node_number):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket.bind(('127.0.0.1', server_addr))
 
-    print(f"Satellite with node number {sat_node_number} is listening on {server_addr} for recieving...")
+    print(f"Satellite {sat_node_number} is listening on {server_addr} for recieving...")
     received_packets = {}
 
     while True:
@@ -60,18 +61,17 @@ def server(global_dequeue, server_addr, buffer_size, sat_node_number):
             send_ack(server_addr,client_address,server_socket,decode_res,received_packets)
         elif (decode_res['control_flag'] == CONTROL_FLAGS['inquiry']) and verify_checksum(decode_res['payload'],decode_res['checksum']):
             try:
-                lat, lon = global_dequeue.pop()
+                lat, lon = global_dequeue[sat_node_number-1].pop()
             except IndexError:
                 # give a out of range latitude(it should be from -90 to 90) to imply error
                 lat, lon = -800, -800
 
-            answer_inquiry(server_addr,client_address,server_socket,lat,lon)
+            answer_inquiry(('127.0.0.1', server_addr),client_address,server_socket,lat,lon)
         else:
             print(f"Checksum mismatch for packet {decode_res['packet_num']}. Packet discarded.")
 
 
 if __name__ == "__main__":
-    global_dequeue = deque(maxlen=10)
     # SERVER_ADDR = ('localhost', 8080)
     SAT_ADDR = {
         1: { 'send': 50010, 'receive': 50011 },
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     }
     BUFFER_SIZE = 1024
     NUM_SATS = 5
-    SAT_INDEX = 0
+    SAT_INDEX = 5 #0 to 4= 5 sats
     # SAT_NODE_NUM=0
     ORBIT_Z_AXIS = (0, 0)
     server_threads = []
@@ -91,6 +91,9 @@ if __name__ == "__main__":
     # on the equator of earth surface, 1 degree of longitude is about 111.3km
     VELOCITY = 27000 / 111.3 / (60 * 60)
     print(f"velocity:{VELOCITY}")
+    global_dequeue = []#deque(maxlen=10)
+    for i in range(NUM_SATS):
+        global_dequeue.append(deque(maxlen=10))
 
     simulation_thread = threading.Thread(target=keep_moving,
                                          args=(global_dequeue, ORBIT_Z_AXIS, NUM_SATS, VELOCITY, SAT_INDEX),

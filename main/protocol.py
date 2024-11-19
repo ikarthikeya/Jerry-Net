@@ -235,7 +235,7 @@ def test_server(host, port):
         packet, sending_address = server_socket.recvfrom(1024)
         # Decode the packet
         decode_res = decode_packet(packet)
-        sending_ack((host,port),sending_address,server_socket,decode_res,received_packets)
+        send_ack((host,port),sending_address,server_socket,decode_res,received_packets)
 
 
 if __name__ == "__main__":

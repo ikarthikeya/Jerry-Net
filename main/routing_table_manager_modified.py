@@ -48,7 +48,7 @@ class RoutingTableManager:
                                 "address": ports['receive']
                             }
                         #print(f"Satellite {node_id} added/updated in the routing table.")
-                        print(f"Satellite {node_addr} added/updated in the routing table.")
+                        # print(f"Satellite {node_addr} added/updated in the routing table.")
 
                     except socket.timeout:
                         print("Satellite inquiry timed out.")
@@ -56,7 +56,8 @@ class RoutingTableManager:
                 print(f"Error updating routing table: {e}")
             finally:
                 inquire_socket.close()
-            print(self.routing_table)
+            # for item in self.routing_table.items():
+            #     print(item)
             # Sleep for the update interval
             time.sleep(self.update_interval)
 
@@ -79,7 +80,8 @@ class RoutingTableManager:
         Retrieve a list of active satellites from the routing table.
         """
         with self.lock:
-            return [
-                (info["latitude"], info["longitude"], sat_id)
-                for sat_id, info in self.routing_table.items()
-            ]
+            return self.routing_table
+            # return [
+            #     (info["latitude"], info["longitude"], sat_id)
+            #     for sat_id, info in self.routing_table.items()
+            # ]

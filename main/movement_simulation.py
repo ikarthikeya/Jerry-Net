@@ -40,7 +40,7 @@ def init_satellites(orbit_z_axis,num_sat):
     xyz_world = np.linalg.inv(rotation).dot(xyz_orbit)
     x_world, y_world,z_world = xyz_world[0,:],xyz_world[1,:],xyz_world[2,:]
     lats_word, lons_word = xyz_to_ll(x_world,y_world,z_world)
-    sat_ll_list = tuple(zip(list(lats_word),list(lons_word)))
+    sat_ll_list = [list(item) for item in zip(lats_word, lons_word)]
     return sat_ll_list
 
 

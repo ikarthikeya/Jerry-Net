@@ -91,7 +91,7 @@ def generate_synthetic_data(num_samples=1000, seed=42):
 # Generate data
 X, y = generate_synthetic_data(num_samples=1000)
 # One-hot encode the categorical feature
-encoder = OneHotEncoder(sparse=False)
+encoder = OneHotEncoder(sparse_output=False)
 encoded_weather = encoder.fit_transform(X[['Weather_Condition']])
 encoded_weather_df = pd.DataFrame(encoded_weather, columns=encoder.get_feature_names_out(['Weather_Condition']))
 
@@ -100,8 +100,8 @@ X = pd.concat([X.drop(columns=['Weather_Condition']), encoded_weather_df], axis=
 
 # Split into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-print(X_train.head())
-print(X_train.describe())
+# print(X_train.head())
+# print(X_train.describe())
 
 
 # Train a model

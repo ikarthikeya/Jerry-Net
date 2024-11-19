@@ -5,36 +5,45 @@ import numpy as np
 import threading
 import psutil
 import joblib
-from routing_table_manager import RoutingTableManager
+from routing_table_manager_modified import RoutingTableManager
 import zlib
 from movement_simulation import earth_sat_distance
 from protocol import send_packets
 
 
 # Load the trained model
-# latency_model = joblib.load('latency_predictor.pkl')
+latency_model = joblib.load('latency_predictor.pkl')
 
-# def predict_latency(earth_lat, earth_lon, satellites):
-#     """
-#     Predict latency for each satellite and select the one with the lowest latency.
+def predict_latency(routing_table):
+    """
+    Predict latency for each satellite and select the one with the lowest latency.
 
-#     :param earth_lat: Latitude of Earth station
-#     :param earth_lon: Longitude of Earth station
-#     :param satellites: List of tuples [(sat_lat, sat_lon, node_id), ...]
-#     :return: Best satellite (node_id, predicted_latency)
-#     """
-#     features = []
-#     for sat_lat, sat_lon, node_id in satellites:
-#         features.append([earth_lat, earth_lon, sat_lat, sat_lon])
+    :param earth_lat: Latitude of Earth station
+    :param earth_lon: Longitude of Earth station
+    :param satellites: List of tuples [(sat_lat, sat_lon, node_id), ...]
+    :return: Best satellite (node_id, predicted_latency)
+    """
+        # Create an array of 4 zeros
+    weather = np.zeros(4)
+    traffic_load = np.random.uniform(0, 100)
 
-#     # Predict latencies
-#     predictions = latency_model.predict(features)
-#     best_idx = np.argmin(predictions)
-#     return satellites[best_idx][-1], predictions[best_idx]
+    # Randomly choose one index to set to 1
+    weather[np.random.randint(4)] = 1
+    features = []
+    for _,sat_info in routing_table.items():
+        distance=earth_sat_distance(EARTH_LL[0], EARTH_LL[1], sat_info['latitude'], sat_info['longitude'])
+        signal_strength = np.clip(1 / (np.array(distance) / 1000 + np.argmax(weather) + 1), 0, 1)
+        features.append([EARTH_LL[0], EARTH_LL[1], sat_info['latitude'], sat_info['longitude'],distance,traffic_load,signal_strength\
+            ,weather[0],weather[1],weather[2],weather[3]])
+
+    # Predict latencies
+    predictions = latency_model.predict(np.array(features))
+    best_idx = np.argmin(predictions)
+    return weather,list(routing_table.keys())[best_idx], predictions[best_idx]
 
 # Example usage in clumsy_simulate or client function
-satellites = [(15, 45, 'Satellite-1'), (30, 60, 'Satellite-2')]  # Satellite lat/lon with IDs
-earth_lat, earth_lon = 10, 20  # Example Earth location
+# satellites = [(15, 45, 'Satellite-1'), (30, 60, 'Satellite-2')]  # Satellite lat/lon with IDs
+# earth_lat, earth_lon = 10, 20  # Example Earth location
 
 
 # best_satellite, best_latency = predict_latency(earth_lat, earth_lon, satellites)
@@ -148,13 +157,15 @@ def client(routing_manager, sat_addresses, buffer_size, timeout, debug_inter, ch
     # get active sats
     active_satellites = routing_manager.get_active_satellites()
     # print(active_satellites)
+    weather,best_satellite, best_latency = predict_latency(active_satellites)
+    print(f"Best satellite to use: {best_satellite}, Predicted latency: {best_latency:.2f} ms, Current weather: {WEATHER_CONDITIONS[np.argmax(weather)]}")
     # predeict best
 
     # Data to be sent
     earth1_addr = ['127.0.0.1', 8080]  # the ultimate src address
     earth2_addr = ['127.0.0.1', 8081]  # the ultimate destination address
     # this server address should be decided by the rounting manager
-    server_addr = ['127.0.0.1', 50011]  # current receiver satellite(router) address
+    server_addr = ['127.0.0.1', active_satellites[best_satellite]['address']]  # current receiver satellite(router) address
 
     send_packets(earth1_addr, earth2_addr, server_addr, message,
                  timeout=timeout,chunk_size=chunk_size,buffer_size=buffer_size,
@@ -171,10 +182,12 @@ if __name__ == "__main__":
     }
     # SERVER_ADDR = ('localhost', 8080),('localhost', 8081),
     BUFFER_SIZE = 1024
-    EARTH_LL = (0, -180)  # latitude, longitude
+    EARTH_LL = (20, 70)  # latitude, longitude
     TIMEOUT = 2  # 2s timeout for inquiry satellites latitude and longitude information
     DEBUG_INTER = 1  # 1s
     CHUNK_SIZE = 10  # bit
+    EARTH_NODE_NUM=7
+    WEATHER_CONDITIONS= {0 : 'Clear', 1 : 'Cloudy', 2 : 'Rain', 3 : 'Storm'}
     # clumsy_thread = threading.Thread(target=clumsy_simulate,
     #                                  args=(SERVER_ADDR,BUFFER_SIZE,TIMEOUT,EARTH_LL,EARTH_NODE_NUM),
     #                                  daemon=True)
@@ -197,8 +210,9 @@ if __name__ == "__main__":
     try:
 
         message = "This is a test string that will be sent as binary data over UDP in smaller packets."
+        time.sleep(5)
         client(routing_manager, SAT_ADDR, BUFFER_SIZE, TIMEOUT, DEBUG_INTER, CHUNK_SIZE, message)
         while True:
-            time.sleep(5)
+            time.sleep(3)
     except KeyboardInterrupt:
         print("Exiting...")
