@@ -18,21 +18,6 @@ satellite_positions = {
     "sat3": (40.71, -74.00),   # New York
     "sat4": (37.77, -122.42),  # San Francisco
     "sat5": (34.68, -117.83),  # Example Satellite
-    "sat6": (48.85, 2.35),     # Paris
-    "sat7": (51.50, -0.12),    # London
-    "sat8": (35.68, 139.69),   # Tokyo
-    "sat9": (28.61, 77.21),    # Delhi
-    "sat10": (39.90, 116.40),  # Beijing
-    "sat11": (-33.87, 151.21), # Sydney
-    "sat12": (55.75, 37.62),   # Moscow
-    "sat13": (-23.55, -46.63), # São Paulo
-    "sat14": (1.35, 103.82),   # Singapore
-    "sat15": (19.43, -99.13),  # Mexico City
-    "sat16": (31.23, 121.47),  # Shanghai
-    "sat17": (41.90, 12.49),   # Rome
-    "sat18": (40.41, -3.70),   # Madrid
-    "sat19": (37.98, 23.73),   # Athens
-    "sat20": (35.22, -80.84),  # Charlotte
     "earth2": (32.77, -96.79)  # Stationary Earth object
 }
 
@@ -43,21 +28,6 @@ receiver_ports = {
     "sat3": 5007,
     "sat4": 5008,
     "sat5": 5009,
-    "sat6": 5011,
-    "sat7": 5012,
-    "sat8": 5013,
-    "sat9": 5014,
-    "sat10": 5015,
-    "sat11": 5016,
-    "sat12": 5017,
-    "sat13": 5018,
-    "sat14": 5019,
-    "sat15": 5020,
-    "sat16": 5021,
-    "sat17": 5022,
-    "sat18": 5023,
-    "sat19": 5024,
-    "sat20": 5025,
     "earth2": 5010
 }
 
