@@ -162,8 +162,8 @@ def client(routing_manager, sat_addresses, buffer_size, timeout, debug_inter, ch
     # predeict best
 
     # Data to be sent
-    earth1_addr = ['127.0.0.1', 8080]  # the ultimate src address
-    earth2_addr = ['127.0.0.1', 8081]  # the ultimate destination address
+    earth1_addr = ['127.0.0.1', 50099]  # the ultimate src address
+    earth2_addr = ['127.0.0.1', 50099]  # the ultimate destination address
     # this server address should be decided by the rounting manager
     server_addr = ['127.0.0.1', active_satellites[best_satellite]['address']]  # current receiver satellite(router) address
 

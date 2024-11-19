@@ -135,12 +135,14 @@ def send_packets(src_addr,des_addr,router_addr,message,timeout=1,chunk_size=32,b
     # send package from sending queue
     while not sending_queue.empty():
         packet_number, packet = sending_queue.get()
-        print(f"Sent packet {packet_number}/{total_packets}")
+        print(f'Current queue size: {sending_queue.qsize()}')
+        print(f"Sent packet {packet_number+1}/{total_packets}")
         try:
             # send the packet
             total_send += 1
             start_time = time.time()
-            udp_sender.sendto(packet, router_addr)
+            print(f"router_addr:{router_addr}")
+            udp_sender.sendto(packet, tuple(router_addr))
             # Wait for acknowledgement
             ack, _ = udp_sender.recvfrom(buffer_size)
             end_time = time.time()
@@ -152,12 +154,12 @@ def send_packets(src_addr,des_addr,router_addr,message,timeout=1,chunk_size=32,b
             assert decode_res['control_flag'] == CONTROL_FLAGS['ack'], "ack flag error, resending..."
             assert decode_res['packet_num'] == packet_number, "ack packet_number mismatch, resending..."
             assert verify_checksum(decode_res['payload'], decode_res['checksum']), "ack checksum error, resending..."
-            print(f"Received ACK from {router_addr[0]}:{router_addr[1]}: packet_num={packet_number}, time={rtt:.2f} ms")
+            print(f"Received ACK from {router_addr[0]}:{router_addr[1]}: packet_num={packet_number+1}, time={rtt:.2f} ms")
         except socket.timeout:
-            print(f"Timeout: packet_num={packet_number}, resending...")
+            print(f"Timeout: packet_num={packet_number+1}, resending...")
             sending_queue.put((packet_number, packet))
-        except Exception:
-            sending_queue.put((packet_number, packet))
+        #except Exception:
+        #    sending_queue.put((packet_number, packet))
         time.sleep(debug_interval)
     print(f"---UDP packets all sent: statistics below---\n")
     packets_transmitted = total_send

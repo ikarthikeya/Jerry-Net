@@ -58,7 +58,7 @@ def server(global_dequeue, server_addr, buffer_size, sat_node_number):
         # Decode the packet
         decode_res = decode_packet(data)
         if (decode_res['control_flag'] == CONTROL_FLAGS['data']) and verify_checksum(decode_res['payload'], decode_res['checksum']):
-            send_ack(server_addr,client_address,server_socket,decode_res,received_packets)
+            send_ack(('127.0.0.1', server_addr),client_address,server_socket,decode_res,received_packets)
         elif (decode_res['control_flag'] == CONTROL_FLAGS['inquiry']) and verify_checksum(decode_res['payload'],decode_res['checksum']):
             try:
                 lat, lon = global_dequeue[sat_node_number-1].pop()
