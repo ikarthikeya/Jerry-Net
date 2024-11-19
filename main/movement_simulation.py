@@ -69,6 +69,25 @@ def satellites_move(sat_ll, orbit_z_axis, velocity, time):
     return lat_end,lon_end
 
 
+def earth_sat_distance(earth_lat, earth_lon, sat_lat, sat_lon):
+    # according to the starlink blog, https://blog.apnic.net/2024/05/17/a-transport-protocols-view-of-starlink/
+    # the height of a satellite is about 550km
+    SAT_H = 550.
+    EARTH_R = 6378.
+    # calculate cartesian coordinates for earth station:
+    x_earth = EARTH_R * np.cos(np.radians(earth_lat)) * np.cos(np.radians(earth_lon))
+    y_earth = EARTH_R * np.cos(np.radians(earth_lat)) * np.sin(np.radians(earth_lon))
+    z_earth = EARTH_R * np.sin(np.radians(earth_lon))
+    # calculate cartesian coordinates for the satellite:
+    sat_r = EARTH_R + SAT_H
+    x_sat = sat_r * np.cos(np.radians(sat_lat)) * np.cos(np.radians(sat_lon))
+    y_sat = sat_r * np.cos(np.radians(sat_lat)) * np.sin(np.radians(sat_lon))
+    z_sat = sat_r * np.sin(np.radians(sat_lon))
+    # calculate distance between earth and satellite
+    distance = np.sqrt((x_sat - x_earth) ** 2 + (y_sat - y_earth) ** 2 + (z_sat - z_earth) ** 2)
+    return distance
+
+
 if __name__ == "__main__":
     orbit_z_axis=(5,90)
     num_sats = 6

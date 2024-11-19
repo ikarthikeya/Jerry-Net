@@ -28,7 +28,6 @@ def server(global_dequeue,server_addr, buffer_size, sat_node_number):
 
     print(f"Satellite with node number {sat_node_number} is listening on {server_addr[0]}:{server_addr[1]}...")
     received_packets = {}
-    total_packets_dict = {}  # Total packets to expect
 
     while True:
         # Receive a packet
@@ -40,7 +39,6 @@ def server(global_dequeue,server_addr, buffer_size, sat_node_number):
         node_number = int.from_bytes(node_number,'big') # for satellites, node_number= sat_index, for
         packet_number = int.from_bytes(packet_number, 'big')
         total_packets = int.from_bytes(total_packets, 'big')
-        total_packets_dict[node_number] = total_packets
         if flag == 0:
             try:
                 lat,lon = global_dequeue.pop()
