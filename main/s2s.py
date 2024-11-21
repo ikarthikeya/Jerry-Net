@@ -8,6 +8,7 @@ import random  # For packet loss simulation
 import sys
 from time import perf_counter
 sys.stdout.reconfigure(encoding='utf-8')
+from protocol import create_udp_packet, CONTROL_FLAGS,decode_packet
 
 
 # Satellite configuration
@@ -129,12 +130,15 @@ def send_packet(sender_id, receiver_id, receiver_port, packet):
     # if random.random() < PACKET_LOSS_PROBABILITY:
     #     print(f"Packet {packet['packet_num']} from {sender_id} to {receiver_id} lost in transmission.")
     #     return
+    decode_res = decode_packet(packet)
+    packet_json = decode_res['payload']
+    path_info = json.loads(packet_json)
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client_socket:
-            client_socket.sendto(json.dumps(packet).encode(), ("localhost", receiver_port))
-            print(f"Packet {packet['packet_num']} is sent from {sender_id} to {receiver_id} at {receiver_port}")
+            client_socket.sendto(packet, ("localhost", receiver_port))
+            print(f"Packet {path_info['packet_num']} is sent from {sender_id} to {receiver_id} at {receiver_port}")
     except Exception as e:
-        print(f"Error sending packet {packet['packet_num']} to {receiver_id}: {e}")
+        print(f"Error sending packet {path_info['packet_num']} to {receiver_id}: {e}")
 
 # Server to listen for packets
 def start_server(host, port, satellite_id):
@@ -145,12 +149,23 @@ def start_server(host, port, satellite_id):
 
     while True:
         data, addr = server_socket.recvfrom(1024)
-        packet = json.loads(data.decode())
-        print(f"{satellite_id} received packet {packet['packet_num']} from {packet['sender']} with message: {packet['data']}")
+        decode_res = decode_packet(data)
+        packet_json = decode_res['payload']
+        path_info = json.loads(packet_json)
+        #packet = json.loads(data.decode())
+        print(f"{satellite_id} received packet {path_info['packet_num']} from {path_info['sender']}")
 
         # Check if there are more hops in the path
-        if packet.get("path") and len(packet["path"]) > 0:
-            next_hop = packet["path"].pop(0)  # Get the next hop from the path
+        if path_info.get("path") and len(path_info["path"]) > 0:
+            #print(f"----path:{path_info['path']}-----")
+            next_hop = path_info["path"].pop(0)  # Get the next hop from the path
+            payload_json = json.dumps(path_info)
+            payload = payload_json.encode('utf-8')
+            dumpy_src_addr, dumpy_src_port = '127.0.0.1', 1234
+            dumpy_des_addr, dumpy_des_port = '127.0.0.1', 1235
+            packet = create_udp_packet(dumpy_src_addr, dumpy_src_port, dumpy_des_addr, dumpy_des_port, payload,
+                                       flag='path')
+
             if next_hop in receiver_ports:
                 send_packet(
                     satellite_id,  # Current satellite
@@ -159,11 +174,11 @@ def start_server(host, port, satellite_id):
                     packet  # Packet to be sent
                 )
         else:
-            print(f"{satellite_id} has no more hops for packet {packet['packet_num']}. Packet delivered.")
+            print(f"{satellite_id} has no more hops for packet {path_info['packet_num']}. Packet delivered.")
 
 
 if __name__ == "__main__":
-    packet_count = 10
+    packet_count = 20
     destination = "earth2"
 
     for sat_id, port in receiver_ports.items():
@@ -213,13 +228,19 @@ if __name__ == "__main__":
         # Handle sending packets for A* (or use Dijkstra if desired)
         if a_star_path and len(a_star_path) > 1:
             next_hop = a_star_path[1]
-            packet = {
+            payload = {
                 "sender": satellite_id,
                 "packet_num": packet_num,
                 "data": f"Hello from {satellite_id}! Packet {packet_num}",
-                "path": a_star_path[1:]
+                "path": a_star_path[2:]
             }
-            print(f"Sending Packet via A*: {packet}")
+            payload_json = json.dumps(payload)
+            payload = payload_json.encode('utf-8')
+            dumpy_src_addr,dumpy_src_port = '127.0.0.1',1234
+            dumpy_des_addr, dumpy_des_port = '127.0.0.1',1235
+            packet = create_udp_packet(dumpy_src_addr,dumpy_src_port,dumpy_des_addr,dumpy_des_port,payload,
+                                       flag='path')
+            #print(f"Sending Packet via A*: {packet}")
             send_packet(satellite_id, next_hop, receiver_ports[next_hop], packet)
         else:
             print(f"No valid A* path to {destination} from {satellite_id}")

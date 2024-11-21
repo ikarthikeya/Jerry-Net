@@ -5,10 +5,14 @@ import numpy as np
 import threading
 import psutil
 import joblib
+import json
+import random
+from datetime import datetime
 from routing_table_manager_modified import RoutingTableManager
 import zlib
 from movement_simulation import earth_sat_distance
 from protocol import send_packets
+#from packetrans import generate_sensor_data
 
 
 # Load the trained model
@@ -182,7 +186,7 @@ if __name__ == "__main__":
     EARTH_LL = (20, 70)  # latitude, longitude
     TIMEOUT = 2  # 2s timeout for inquiry satellites latitude and longitude information
     DEBUG_INTER = 1  # 1s
-    CHUNK_SIZE = 10  # bit
+    CHUNK_SIZE = 32  # bit
     EARTH_NODE_NUM=7
     WEATHER_CONDITIONS= {0 : 'Clear', 1 : 'Cloudy', 2 : 'Rain', 3 : 'Storm'}
     # clumsy_thread = threading.Thread(target=clumsy_simulate,
@@ -210,8 +214,20 @@ if __name__ == "__main__":
 
     # keep the main program alive
     try:
+        """
+        sensor = {
+            "sensor_id": 0,
+            "sensor_type": random.choice(["moisture", "temperature", "soil_ph", "humidity", "light_intensity"]),
+            "location_lat": random.uniform(-90, 90),
+            "location_lon": random.uniform(-180, 180)
+        }
 
-        message = "This is a test string that will be sent as binary data over UDP in smaller packets."
+        #timestamp = datetime.now().isoformat()
+        
+        #message = generate_sensor_data(sensor, timestamp)
+        """
+        #message = "This is a test string that will be sent as binary data over UDP in smaller packets."
+        message ='{"packet_id": "42d62c0c-c0cf-4911-b00b-c40763ac5c80", "sensor_id": 1, "sensor_type": "humidity", "location": {"lat": -2.1595, "lon": -5.2991}, "timestamp": "2024-11-19T14:19:27.011346", "value": 68.45, "unit": "%", "status": "active"}, {"packet_id": "5bb15fa5-02ff-42ed-a4a7-4e3de975a572", "sensor_id": 2, "sensor_type": "humidity", "location": {"lat": -20.3431, "lon": -77.4995}, "timestamp": "2024-11-19T14:19:27.011346", "value": 73.61, "unit": "%", "status": "active"}'
         time.sleep(5)
         client(routing_manager, SAT_ADDR, BUFFER_SIZE, TIMEOUT, DEBUG_INTER, CHUNK_SIZE, message)
         while True:

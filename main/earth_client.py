@@ -269,10 +269,10 @@ if __name__ == "__main__":
 
     # keep the main program alive
     try:
-        
-            message = "This is a test string that will be sent as binary data over UDP in smaller packets."
-            client(routing_manager,SAT_ADDR, BUFFER_SIZE, TIMEOUT,DEBUG_INTER, CHUNK_SIZE, EARTH_NODE_NUM,message)
-            while True:
-                time.sleep(5)
+
+        message = "This is a test string that will be sent as binary data over UDP in smaller packets."
+        client(routing_manager,SAT_ADDR, BUFFER_SIZE, TIMEOUT,DEBUG_INTER, CHUNK_SIZE, EARTH_NODE_NUM,message)
+        while True:
+            time.sleep(5)
     except KeyboardInterrupt:
         print("Exiting...")

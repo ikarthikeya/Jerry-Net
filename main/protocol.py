@@ -21,6 +21,7 @@ CONTROL_FLAGS = {
     "data": 0,
     "ack": 1,
     "inquiry": 2,
+    "path": 3,
 }
 
 
