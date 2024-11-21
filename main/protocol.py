@@ -86,9 +86,9 @@ def batch_udp_packets(src_ip,src_port,des_ip,des_port,message,chunk_size=32,ttl=
 
 def decode_packet(packet):
     # Decode the packet
-    src_ip = int.from_bytes(packet[:4],'big')
+    src_ip = socket.inet_ntoa(packet[:4])
     src_port = int.from_bytes(packet[4:6],'big')
-    des_ip = int.from_bytes(packet[6:10],'big')
+    des_ip = socket.inet_ntoa(packet[6:10])
     des_port = int.from_bytes(packet[10:12],'big')
     control_flag = int.from_bytes(packet[12:13],'big')
     ttl = int.from_bytes(packet[13:14], 'big')
@@ -111,7 +111,7 @@ def decode_packet(packet):
     return res
 
 
-def send_packets(src_addr,des_addr,router_addr,message,timeout=1,chunk_size=32,buffer_size=1024,debug_interval=1):
+def send_packets(src_addr,des_addr,router_addr,message,timeout=1,chunk_size=32,buffer_size=1024,debug_interval=1,suppress_log=False):
     src_ip, src_port = src_addr
     des_ip, des_port = des_addr
     router_ip, router_port = router_addr
@@ -125,6 +125,7 @@ def send_packets(src_addr,des_addr,router_addr,message,timeout=1,chunk_size=32,b
     total_packets = None
     sending_queue = Queue()
     total_send = 0
+    total_resend = 0
     rtts = []
     for packet,packet_number,total_packets in \
             batch_udp_packets(src_ip,src_port,des_ip,des_port,message,
@@ -136,7 +137,7 @@ def send_packets(src_addr,des_addr,router_addr,message,timeout=1,chunk_size=32,b
     # send package from sending queue
     while not sending_queue.empty():
         packet_number, packet = sending_queue.get()
-        print(f'Current queue size: {sending_queue.qsize()}')
+        #print(f'Current queue size: {sending_queue.qsize()}')
         print(f"Sent packet {packet_number+1}/{total_packets}")
         try:
             # send the packet
@@ -159,35 +160,42 @@ def send_packets(src_addr,des_addr,router_addr,message,timeout=1,chunk_size=32,b
         except socket.timeout:
             print(f"Timeout: packet_num={packet_number+1}, resending...")
             sending_queue.put((packet_number, packet))
-        #except Exception:
-        #    sending_queue.put((packet_number, packet))
+            total_resend += 1
+        except Exception:
+            sending_queue.put((packet_number, packet))
+            total_resend += 1
         time.sleep(debug_interval)
-    print("----------------------------------------------------")
-    print(f"---UDP packets all sent: statistics below---\n")
-    packets_transmitted = total_send
-    packets_received = len(rtts)
-    packet_lost_count = packets_transmitted - packets_received
-    packet_loss = ((packets_transmitted - packets_received) / packets_transmitted) * 100
-    print(f"{packets_transmitted} packets transmitted, "
-          f"{packets_received} received, "
-          f"{packet_lost_count} lost.")
-    print(f"({packet_loss:.1f}% loss)\n")
-    if rtts:
-        min_rtt = min(rtts)
-        max_rtt = max(rtts)
-        avg_rtt = sum(rtts) / len(rtts)
-        print(f"rtt min={min_rtt:.2f} ms, avg={avg_rtt:.2f} ms, max={max_rtt:.2f} ms\n")
-    else:
-        print("No RTT data available.\n")
-    print("----------------------------------------------------")
+    if not suppress_log:
+        print("----------------------------------------------------")
+        print(f"---UDP packets all sent: statistics below---\n")
+        packets_transmitted = total_send
+        packets_received = len(rtts)
+        packet_lost_count = packets_transmitted - packets_received
+        packet_loss = ((packets_transmitted - packets_received) / packets_transmitted) * 100
+        packet_loss_after_resend =((packets_transmitted + total_resend - packets_received) / packets_transmitted) * 100
+        print(f"{packets_transmitted} packets transmitted, "
+              f"{packets_received} received, "
+              f"{packet_lost_count} lost, "
+              f"{total_resend} resent.")
+        print(f"({packet_loss:.1f}% loss)\n")
+        print(f"({packet_loss_after_resend:.1f}% loss after resending)\n")
+        if rtts:
+            min_rtt = min(rtts)
+            max_rtt = max(rtts)
+            avg_rtt = sum(rtts) / len(rtts)
+            print(f"rtt min={min_rtt:.2f} ms, avg={avg_rtt:.2f} ms, max={max_rtt:.2f} ms\n")
+        else:
+            print("No RTT data available.\n")
+        print("----------------------------------------------------")
 
 
-def send_ack(server_addr,sending_address,server_socket,decode_res,received_packets):
+def send_ack(server_addr,sending_address,server_socket,decode_res,received_packets,suppress_log=False):
     """
     pure sending data acknowledgement function,
     since server thread might have other functions,
     it is possible server has multiple functions including this one.
     """
+    original_string = None
     control_flag = decode_res['control_flag']
     packet_number = decode_res['packet_num']
     total_packet = decode_res['total_packet']
@@ -215,7 +223,23 @@ def send_ack(server_addr,sending_address,server_socket,decode_res,received_packe
             # Reassemble and decode the original string
             binary_stream = b''.join(received_packets[sending_address][i] for i in range(total_packet))
             original_string = binary_stream.decode()
-            print("Reconstructed String:", original_string)
+            if not suppress_log:
+                print("Reconstructed String:", original_string)
+    return original_string
+
+def send_path(sender_id, receiver_id, receiver_port, packet):
+    # if random.random() < PACKET_LOSS_PROBABILITY:
+    #     print(f"Packet {packet['packet_num']} from {sender_id} to {receiver_id} lost in transmission.")
+    #     return
+    decode_res = decode_packet(packet)
+    packet_json = decode_res['payload']
+    path_info = json.loads(packet_json)
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client_socket:
+            client_socket.sendto(packet, ("localhost", receiver_port))
+            print(f"Packet is sent from {sender_id} to {receiver_id} at {receiver_port}")
+    except Exception as e:
+        print(f"Error sending packet to {receiver_id}: {e}")
 
 
 def answer_inquiry(server_addr,sending_address,server_socket,lat,lon):

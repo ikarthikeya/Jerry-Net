@@ -177,6 +177,49 @@ def start_server(host, port, satellite_id):
             print(f"{satellite_id} has no more hops for packet {path_info['packet_num']}. Packet delivered.")
 
 
+def calulate_routing_path(satellite_positions,satellite_id,destination,communication_range=10000):
+    # Build the graph dynamically
+    graph = build_graph(satellite_positions, communication_range)
+
+    # Ensure graph is valid
+    if satellite_id not in graph or destination not in graph:
+        raise Exception(f"Graph is invalid or missing required nodes ({satellite_id}, {destination}). ")
+
+    # Measure Dijkstra execution time
+    dijkstra_start = perf_counter()
+    distances_dijkstra, previous_nodes_dijkstra = dijkstra(graph, satellite_id)
+    dijkstra_end = perf_counter()
+
+    # Measure A* execution time
+    a_star_start = perf_counter()
+    distances_a_star, previous_nodes_a_star = a_star(graph, satellite_id, destination, satellite_positions)
+    a_star_end = perf_counter()
+
+    # Reconstruct paths
+    dijkstra_path = reconstruct_path(previous_nodes_dijkstra, satellite_id, destination)
+    a_star_path = reconstruct_path(previous_nodes_a_star, satellite_id, destination)
+
+    # Output the execution times in microseconds
+    print(f"Dijkstra Time: {(dijkstra_end - dijkstra_start) * 1e6:.2f} µs")
+    print(f"A* Time: {(a_star_end - a_star_start) * 1e6:.2f} µs")
+
+    # Print paths
+    if dijkstra_path:
+        print(f"Dijkstra Path: {' -> '.join(dijkstra_path)}")
+        return dijkstra_path
+    else:
+        print("No path found using Dijkstra's algorithm.")
+
+    if a_star_path:
+        print(f"A* Path: {' -> '.join(a_star_path)}")
+        return a_star_path
+    else:
+        print("No path found using A* algorithm.")
+
+    raise Exception("No path is built.")
+
+
+
 if __name__ == "__main__":
     packet_count = 20
     destination = "earth2"
@@ -189,50 +232,16 @@ if __name__ == "__main__":
         satellite_positions = simulate_satellite_movement(satellite_positions)
 
         # Build the graph dynamically
-        graph = build_graph(satellite_positions, communication_range)
-
-        # Ensure graph is valid
-        if satellite_id not in graph or destination not in graph:
-            print(f"Graph is invalid or missing required nodes ({satellite_id}, {destination}). Skipping...")
-            continue
-
-        # Measure Dijkstra execution time
-        dijkstra_start = perf_counter()
-        distances_dijkstra, previous_nodes_dijkstra = dijkstra(graph, satellite_id)
-        dijkstra_end = perf_counter()
-
-        # Measure A* execution time
-        a_star_start = perf_counter()
-        distances_a_star, previous_nodes_a_star = a_star(graph, satellite_id, destination, satellite_positions)
-        a_star_end = perf_counter()
-
-        # Reconstruct paths
-        dijkstra_path = reconstruct_path(previous_nodes_dijkstra, satellite_id, destination)
-        a_star_path = reconstruct_path(previous_nodes_a_star, satellite_id, destination)
-
-        # Output the execution times in microseconds
-        print(f"Dijkstra Time: {(dijkstra_end - dijkstra_start) * 1e6:.2f} µs")
-        print(f"A* Time: {(a_star_end - a_star_start) * 1e6:.2f} µs")
-
-        # Print paths
-        if dijkstra_path:
-            print(f"Dijkstra Path: {' -> '.join(dijkstra_path)}")
-        else:
-            print("No path found using Dijkstra's algorithm.")
-
-        if a_star_path:
-            print(f"A* Path: {' -> '.join(a_star_path)}")
-        else:
-            print("No path found using A* algorithm.")
+        path = calulate_routing_path(satellite_positions,satellite_id,destination)
 
         # Handle sending packets for A* (or use Dijkstra if desired)
-        if a_star_path and len(a_star_path) > 1:
-            next_hop = a_star_path[1]
+        if path and len(path) > 1:
+            next_hop = path[1]
             payload = {
                 "sender": satellite_id,
                 "packet_num": packet_num,
                 "data": f"Hello from {satellite_id}! Packet {packet_num}",
-                "path": a_star_path[2:]
+                "path": path[2:]
             }
             payload_json = json.dumps(payload)
             payload = payload_json.encode('utf-8')
