@@ -1,3 +1,6 @@
+"""
+protocol design: Ting
+"""
 import time
 import json
 import socket

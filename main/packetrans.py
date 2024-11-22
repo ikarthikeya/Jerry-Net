@@ -1,3 +1,6 @@
+"""
+synthetic data generation: Sanjiv and Karthik
+"""
 import json
 import random
 import time

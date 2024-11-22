@@ -25,3 +25,40 @@ You can clone this repository by using the following Git command:
 ```bash
 git clone https://github.com/ikarthikeya/Jerry-Net.git
 ```
+
+#### **Run the Repository Locally**
+
+##### **Method 1**
+
+First run the following command in one terminal
+
+```bash
+python3 main/satellite_server_modified.py
+```
+
+Then run the following command in the second terminal
+
+```bash
+python3 main/earth_client_modified.py
+```
+##### **Method 2**
+
+With tmux installed in a conda environment or in the local Linux system, run
+
+```bash
+bash runme.sh
+```
+
+#### **Run the Repository on SCSS raspberry Pi**
+
+Edit deploy.sh, fill in <your_user_name> and <your_pi_address>, then run
+
+```bash
+bash deploy.sh
+```
+
+As we need use tmux for multiplexing for the program. You have to log in your pi and go to directory ~/Jerry-Net/Jerry-Net, then run
+
+```bash
+bash pi_shell.sh
+```

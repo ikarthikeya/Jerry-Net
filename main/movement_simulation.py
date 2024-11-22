@@ -1,3 +1,6 @@
+"""
+satellites movement simulation: Ting
+"""
 import numpy as np
 
 

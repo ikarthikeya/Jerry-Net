@@ -1,3 +1,6 @@
+"""
+Routing table updating based on satellite distance: Daim
+"""
 import socket
 import time
 import json

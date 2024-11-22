@@ -1,3 +1,10 @@
+"""
+Satellite server main program entrance
+machine learning and earth to satellite logic: Daim
+satellite to satellite logic: Karthik
+message encryption: Sanjiv
+satellite movement simulation: Ting
+"""
 from collections import deque
 import json
 import socket
@@ -7,7 +14,7 @@ from movement_simulation import init_satellites, satellites_move
 import zlib
 from protocol import decode_packet,send_packets,send_ack,send_path,answer_inquiry, CONTROL_FLAGS, create_udp_packet
 from queue import Queue
-
+from encryption import read_key_and_salt,aes_decrypt
 
 def calculate_checksum(data):
     """
@@ -45,7 +52,7 @@ def keep_moving(global_dequeue, orbit_z_axis, num_sats, velocity, sat_index):
             global_dequeue[i].append((lat_lon[i][0], lat_lon[i][1]))
 
 
-def server(global_dequeue, server_addr, receiver_ports, buffer_size, satellite_id,sat_node_number):
+def server(global_dequeue, server_addr, receiver_ports, buffer_size, satellite_id,sat_node_number,encryption=True):
     # create udp satellite server
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket.bind(('127.0.0.1', server_addr))
@@ -55,7 +62,12 @@ def server(global_dequeue, server_addr, receiver_ports, buffer_size, satellite_i
     message_queue = Queue()
     while True:
         # Receive a packet
-        data, client_address = server_socket.recvfrom(buffer_size)
+        try:
+            data, client_address = server_socket.recvfrom(buffer_size)
+        except Exception as e:
+            #print(e)
+            #print(f"minor_error: server_addr:{server_addr}")
+            pass
         print(f"Packet received on {satellite_id}")
         # Decode the packet
         decode_res = decode_packet(data)
@@ -96,6 +108,19 @@ def server(global_dequeue, server_addr, receiver_ports, buffer_size, satellite_i
                 print("-----------------------------------------------------------")
                 print(f"{satellite_id} has no more hops. Packet delivered.")
                 message = message_queue.get()
+                if encryption:
+                    # Read AES Key and Salt from File
+                    try:
+                        AES_KEY, _ = read_key_and_salt("aes_key_salt.txt")
+                    except Exception as e:
+                        print(f"Failed to read AES key and salt: {e}")
+                        exit(1)
+                        # Decrypt the data
+                    try:
+                        message = aes_decrypt(message, AES_KEY)
+                    except Exception as e:
+                        print(f"Failed to decrypt the message: {e}")
+                        exit(1)
                 print("Reconstructed String:", message)
                 print("------------------------P2P NET SUCCESS!--------------------")
 
@@ -110,7 +135,7 @@ def server(global_dequeue, server_addr, receiver_ports, buffer_size, satellite_i
             except IndexError:
                 # give a out of range latitude(it should be from -90 to 90) to imply error
                 lat, lon = -800, -800
-            print(f"server_addr:{server_addr}")
+            #print(f"server_addr:{server_addr}")
             answer_inquiry(('127.0.0.1', server_addr),client_address,server_socket,lat,lon)
         else:
             print(f"Checksum mismatch for packet {decode_res['packet_num']}. Packet discarded.")
