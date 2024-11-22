@@ -30,13 +30,19 @@ git clone https://github.com/ikarthikeya/Jerry-Net.git
 
 ##### **Method 1**
 
-First run the following command in one terminal
+Make sure all dependencies are installed, run
+
+```bash
+pip install -r requirements.txt
+```
+
+Then run the following command in one terminal
 
 ```bash
 python3 main/satellite_server_modified.py
 ```
 
-Then run the following command in the second terminal
+And run the following command in the second terminal
 
 ```bash
 python3 main/earth_client_modified.py
